@@ -1,0 +1,127 @@
+---
+title: "validatejsonr"
+author: "Leif Jonsson"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+validatejsonr is an R wrapper around an efficient C++ JSON Schema validator called 'rapidjson'. You can read more about 'rapidjson' here: https://github.com/miloyip/rapidjson. JSON files can be *well-formed* and/or *valid*. A well-formed JSON file conforms to the *syntactic* 
+requirements of JSON. Additionaly a *valid* JSON file conforms to a specified JSON Schema. 
+
+validatejsonr via 'rapidjson' supports JSON Schema Draft v4. 2016-09-09: 'RapidJSON' passed 262 out of 263 tests in JSON Schema Test Suite (JSON Schema draft 4).
+
+## Usage Scenarios
+
+validatejsonr support four main usage scenarios. 
+
+  * Validate a JSON file against a JSON Schema file
+  * Validate a JSON string against a JSON Schema file
+  * Validate a JSON file against a JSON Schema string
+  * Validate a JSON string against a JSON Schema string
+
+## Validation Results
+
+The result of a validation contains four fields
+
+  * value - A value of 0 on correct applications, non-zero otherwise
+  * message - A message containging a string describing the result
+  * jsonfile - A path to the input file given
+  * schema - A path to the schema file given or a string representation of the schema if given as a string
+
+## Examples
+
+### File - File Example
+
+Example using a schema file on a well-formed and valid JSON file returns a 0 value.
+
+```{r}
+library(validatejsonr)
+validjson     <- system.file("extdata", "item-3.json", package = "validatejsonr")
+schemafile    <- system.file("extdata", "schema.json", package = "validatejsonr")
+
+result <- validate_jsonfile_with_schemafile(validjson, schemafile)
+print(result$value)
+
+malformedjson <- system.file("extdata", "malformed-json.json", package = "validatejsonr")
+
+print(result$message)
+
+```
+
+Using validate_* on a syntactically invalid JSON file returns a 1XX error.
+
+```{r}
+malformedjson <- system.file("extdata", "malformed-json.json", package = "validatejsonr")
+
+result <- validate_jsonfile_with_schemafile(malformedjson, schemafile)
+print(result$value)
+
+print(result$message)
+```
+
+In addition to containing the resulting *value* the result also contains the input Schema and JSON file.
+```{r}
+cat("Schema that the function was called with:")
+print(result$schema)
+
+cat("JSON File that the function was called with:")
+print(result$jsonfile)
+```
+
+Using validate_* on a syntactically correct JSON but invalid (file does not conform to schema) file returns a 2XX error.
+
+```{r}
+invalidjson  <- system.file("extdata", "item-2.json", package = "validatejsonr")
+
+result <- validate_jsonfile_with_schemafile(invalidjson, schemafile)
+
+print(result$value)
+
+print(result$message)
+```
+
+Using validate_* on missing files throws and error.
+
+```{r}
+result = tryCatch({
+    validate_jsonfile_with_schemafile("missing", schemafile)
+}, error = function(e) {
+    print(e)
+})
+
+result = tryCatch({
+validate_jsonfile_with_schemafile(validjson, "missing")
+}, error = function(e) {
+    print(e)
+})
+```
+
+## More Examples
+
+### JSON String - Schema File Example
+
+Using the string API, string JSON, schema file.
+```{r}
+json_code <- "{\"category\": \"book\", \"price\": 25,  \"title\": \"abrakadabra\"}"
+result <- validate_result <- validate_json_with_schemafile(json_code, schemafile)
+print(result$value)
+print(result$message)
+```
+
+### JSON string - Schema string Example
+
+Using the string API, string JSON, string schema.
+
+```{r}
+json_code <- "{\"category\": \"book\", \"price\": 25,  \"title\": \"abrakadabra\"}"
+schema_code     <- readChar(schemafile, file.info(schemafile)$size)
+print(schema_code)
+result <- validate_result <- validate_json_with_schema(json_code, schema_code)
+print(result$value)
+print(result$message)
+print(result$schema)
+```
